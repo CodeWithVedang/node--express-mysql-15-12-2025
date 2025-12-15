@@ -20,12 +20,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!token) return;
 
-    setCountdown(60); // reset each login
+    setCountdown(60);
 
     const interval = setInterval(() => {
       setCountdown((c) => {
         if (c <= 1) {
-          logout();
+          logout();    // 🔥 Now calls backend properly
           return 0;
         }
         return c - 1;
@@ -42,10 +42,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!res.data.success) return false;
 
       setToken(res.data.token);
-      setRole(res.data.role);
+      setRole(res.data.user.role);
 
       localStorage.setItem("token", res.data.token);
-      localStorage.setItem("role", res.data.role);
+      localStorage.setItem("role", res.data.user.role);
 
       return true;
     } catch {
@@ -53,7 +53,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await api.post("/auth/logout");  // 🔥 Save logout_time in DB
+    } catch (err) {
+      console.warn("Logout API failed", err);
+    }
+
     localStorage.removeItem("token");
     localStorage.removeItem("role");
 
