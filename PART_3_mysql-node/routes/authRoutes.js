@@ -1,13 +1,14 @@
 import express from "express";
-import { AuthController } from "../controllers/authController.js";
-import { authExpireOptional } from "../middleware/authExpireOptional.js";
+import { login, logout, getLogs } from "../controllers/authController.js";
+import { authExpire } from "../middleware/authExpire.js";
 
 const router = express.Router();
 
-// Login (NO token required)
-router.post("/login", AuthController.login);
+// public login route
+router.post("/login", login);
 
-// Logout (token REQUIRED but should NOT block on expiration)
-router.post("/logout", authExpireOptional, AuthController.logout);
+// protected logout + logs
+router.post("/logout", logout);
+router.get("/logs", getLogs);
 
 export default router;

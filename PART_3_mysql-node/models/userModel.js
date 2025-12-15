@@ -1,78 +1,62 @@
-// models/userModel.js
-// --------------------------------------------------
-// USER MODEL (MySQL Queries + SRP Principles)
-// --------------------------------------------------
-
 import pool from "../config/db.js";
 
 export const UserModel = {
-  
-  // -----------------------------
-  // GET ALL USERS (Paginated)
-  // -----------------------------
+  // GET ALL USERS
   async getAll(limit, offset) {
-    limit = Number(limit);
-    offset = Number(offset);
-
     const [rows] = await pool.query(
-      "SELECT * FROM users LIMIT ? OFFSET ?",
+      "SELECT id, username, password, name, role, status FROM users LIMIT ? OFFSET ?",
       [limit, offset]
     );
-
     return rows;
   },
 
-  // -----------------------------
-  // GET USER BY ID
-  // -----------------------------
+  // GET ONE USER
   async getById(id) {
     const [rows] = await pool.query(
-      `SELECT id, name, username, role, status FROM users WHERE id = ?`,
+      "SELECT id, username, password, name, role, status FROM users WHERE id = ?",
       [id]
     );
     return rows[0];
   },
 
-  // -----------------------------
-  // CREATE USER
-  // -----------------------------
-  async create({ name, username, password, role, status }) {
+  // CREATE USER (Plain Text Password)
+  async create({ username, password, name, role }) {
     const [result] = await pool.query(
-      `
-      INSERT INTO users (name, username, password, role, status)
-      VALUES (?, ?, ?, ?, ?)
-      `,
-      [name, username, password, role, status]
+      `INSERT INTO users (username, password, name, role, status)
+       VALUES (?, ?, ?, ?, 'active')`,
+      [username, password, name, role]
     );
 
-    return { id: result.insertId };
+    return result.insertId;
   },
 
-  // -----------------------------
-  // UPDATE USER
-  // -----------------------------
-  async update(id, { name, username, role, status }) {
+  // UPDATE USER (ALL FIELDS EDITABLE, NO HASHING)
+  async update(id, { username, password, name, role, status }) {
+    let fields = [];
+    let values = [];
+
+    if (username) { fields.push("username = ?"); values.push(username); }
+    if (password) { fields.push("password = ?"); values.push(password); }
+    if (name)     { fields.push("name = ?");     values.push(name); }
+    if (role)     { fields.push("role = ?");     values.push(role); }
+    if (status)   { fields.push("status = ?");   values.push(status); }
+
+    values.push(id);
+
     const [result] = await pool.query(
-      `
-      UPDATE users 
-      SET name = ?, username = ?, role = ?, status = ?
-      WHERE id = ?
-      `,
-      [name, username, role, status, id]
+      `UPDATE users SET ${fields.join(", ")} WHERE id = ?`,
+      values
     );
 
     return { affectedRows: result.affectedRows };
   },
 
-  // -----------------------------
   // DELETE USER
-  // -----------------------------
   async delete(id) {
     const [result] = await pool.query(
-      `DELETE FROM users WHERE id = ?`,
+      "DELETE FROM users WHERE id = ?",
       [id]
     );
-
     return { affectedRows: result.affectedRows };
   }
 };

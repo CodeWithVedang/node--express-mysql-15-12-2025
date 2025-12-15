@@ -1,5 +1,3 @@
-// controllers/userController.js
-
 import { UserModel } from "../models/userModel.js";
 
 export const UserController = {
@@ -33,12 +31,20 @@ export const UserController = {
 
   async create(req, res) {
     try {
-      const data = await UserModel.create(req.body);
+      const { username, password, name, role } = req.body;
+
+      if (!username || !password || !name || !role) {
+        return res.json({ success: false, message: "All fields required" });
+      }
+
+      const id = await UserModel.create({ username, password, name, role });
+
       res.status(201).json({
         success: true,
         message: "User created successfully",
-        data
+        data: { id, username, name, role }
       });
+
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -46,8 +52,15 @@ export const UserController = {
 
   async update(req, res) {
     try {
-      const result = await UserModel.update(req.params.id, req.body);
-      res.json({ success: true, message: "User updated", result });
+      const id = req.params.id;
+      const result = await UserModel.update(id, req.body);
+
+      res.json({
+        success: true,
+        message: "User updated successfully",
+        result
+      });
+
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }

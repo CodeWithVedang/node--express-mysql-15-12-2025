@@ -1,45 +1,54 @@
 // middleware/authExpire.js
 import jwt from "jsonwebtoken";
-import { AuthService } from "../services/authService.js";
+import { LogModel } from "../models/logModel.js";
 
 export const authExpire = async (req, res, next) => {
-  const header = req.headers.authorization;
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
 
-  // Block all routes if no token present
-  if (!header) {
-    return res.status(401).json({
-      success: false,
-      message: "Access denied — Token required"
-    });
-  }
-
-  const token = header.split(" ")[1];
-
-  jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
-    // 🔥 If token expired — auto logout + block request
-    if (err && err.name === "TokenExpiredError") {
-      const payload = jwt.decode(token);
-
-      if (payload?.logId) {
-        await AuthService.logout(payload.logId, true);
-      }
-
-      return res.status(440).json({
-        success: false,
-        message: "Session expired — Auto logout completed"
-      });
-    }
-
-    // If token invalid
-    if (err) {
+    if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Invalid token"
+        message: "Access denied — Token required"
       });
     }
 
-    // Token valid
+    // ---------------------------
+    // 1️⃣ Decode token
+    // ---------------------------
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+      ignoreExpiration: true
+    });
+
+    // DEBUG (correct location)
+    console.log("Decoded token:", decoded);
+    console.log("Session ID:", decoded.session_id);
+
+    // ---------------------------
+    // 2️⃣ Check expiration
+    // ---------------------------
+    const now = Math.floor(Date.now() / 1000);
+    const expired = decoded.exp < now;
+
+    if (expired) {
+      console.log("⚠️ Token expired! Logging out session:", decoded.session_id);
+
+      await LogModel.setLogoutExpired(decoded.session_id);
+
+      return res.status(401).json({
+        success: false,
+        message: "Session expired"
+      });
+    }
+
     req.user = decoded;
     next();
-  });
+
+  } catch (err) {
+    console.log("AuthExpire Error:", err);
+    return res.status(401).json({
+      success: false,
+      message: "Invalid token"
+    });
+  }
 };

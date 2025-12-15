@@ -1,43 +1,83 @@
 // controllers/authController.js
-import { AuthService } from "../services/authService.js";
 
-export const AuthController = {
-  async login(req, res) {
+import jwt from "jsonwebtoken";
+import pool from "../config/db.js";
+import { LogModel } from "../models/logModel.js";
+
+export const login = async (req, res) => {
+  try {
     const { username, password } = req.body;
 
-    const result = await AuthService.login(username, password);
+    const [rows] = await pool.query(
+      "SELECT * FROM users WHERE username = ? AND password = ?",
+      [username, password]
+    );
 
-    if (!result) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid login",
-      });
+    if (rows.length === 0) {
+      return res.json({ success: false, message: "Invalid login" });
     }
 
-    return res.json({
+    const user = rows[0];
+
+    // Create login_logs entry
+    const sessionId = await LogModel.createLoginLog(user.id);
+
+    const token = jwt.sign(
+      {
+        user_id: user.id,
+        role: user.role,
+        session_id: sessionId
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "60s" } // 1-minute expiration
+    );
+
+    res.json({
       success: true,
-      message: "Login successful",
-      token: result.token,
-      logId: result.logId,
-      user: result.user
+      token,
+      user: { id: user.id, username: user.username, role: user.role }
     });
-  },
 
-  async logout(req, res) {
-    const logId = req.user?.logId;
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
-    if (!logId) {
-      return res.status(400).json({
-        success: false,
-        message: "No active session found",
-      });
-    }
 
-    await AuthService.logout(logId, false);
+// -------------------------
+// LOGOUT — manual logout
+// -------------------------
+export const logout = async (req, res) => {
+  try {
+console.log("Manual Logout session_id =", req.user.session_id);
 
-    return res.json({
+await LogModel.setLogout(req.user.session_id);
+
+console.log("Manual logout DB update done");
+
+    res.json({
       success: true,
-      message: "Logout successful"
+      message: "Logged out successfully"
     });
+
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+
+
+// -------------------------
+// GET LOGIN LOGS
+// -------------------------
+export const getLogs = async (req, res) => {
+  try {
+    const logs = await LogModel.getAll();
+    res.json({ success: true, data: logs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 };
