@@ -36,7 +36,8 @@ const server = http.createServer(async (req, res) => {
 
     // Handle file write route (POST /write)
     else if (req.url === "/write" && req.method === "POST") {
-        await writeFile("This text was written using fs.writeFile! hello vedang"); // Write to file
+        await writeFile("hello vedang");
+        // Write to file
         res.writeHead(200, { "Content-Type": "text/plain" });
         res.end("File written successfully!");
     }
