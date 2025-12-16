@@ -20,29 +20,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 useEffect(() => {
   if (!token) return;
 
-  setCountdown(60);
+  let remaining = 60;
+  setCountdown(remaining);
 
   const interval = setInterval(async () => {
-    setCountdown((c) => c - 1);
+    remaining -= 1;
+    setCountdown(remaining);
 
-    if (countdown <= 1) {
+    if (remaining <= 0) {
       try {
-        // 🔥 triggers backend auto-expire (expired = 1)
         await api.get("/users?page=1");
-      } catch {
-        console.warn("Session expired on backend");
-      }
+      } catch {}
 
-      // NOW clear local session AFTER database updates
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       setToken(null);
       setRole(null);
+
+      clearInterval(interval);
     }
   }, 1000);
 
   return () => clearInterval(interval);
-}, [token, countdown]);
+}, [token]);
 
 
   const login = async (username: string, password: string) => {
