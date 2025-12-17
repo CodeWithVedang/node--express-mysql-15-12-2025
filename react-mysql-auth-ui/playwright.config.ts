@@ -1,16 +1,36 @@
+// playwright.config.ts
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './tests',
+  testDir: './tests/test2',
+
+  timeout: 30 * 1000,
+
+  retries: 0,
+
+  reporter: [
+    ['html', { open: 'never' }]
+  ],
 
   use: {
-    baseURL: 'http://localhost:5173', // 🔥 REQUIRED
-    browserName: 'chromium',
+    baseURL: 'http://localhost:5173',
+
     headless: true,
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-    trace: 'on-first-retry',
+
+    // ✅ ALWAYS capture video
+    video: 'on',
+
+    // ✅ ALWAYS capture screenshot
+    screenshot: 'on',
+
+    // ✅ ALWAYS record trace
+    trace: 'on',
   },
 
-  reporter: [['html'], ['list']],
+  projects: [
+    {
+      name: 'chromium',
+      use: { browserName: 'chromium' },
+    }
+  ],
 });
